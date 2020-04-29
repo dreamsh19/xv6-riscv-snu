@@ -101,17 +101,14 @@ uint64
 sys_nice(void)
 {
   // PA4: Fill here!
-
-
-
-
-
-
-
-
-
-
-  return -1;
+  int pid;
+  int inc;
+  if(argint(0, &pid) < 0)
+		return -1;
+	if(argint(1, &inc) < 0)
+		return -1;
+	
+	return nice(pid,inc);
 }
 
 uint64

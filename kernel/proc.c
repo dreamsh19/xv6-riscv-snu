@@ -680,6 +680,32 @@ procdump(void)
 
 #ifdef SNU
 int
+nice(int pid, int inc)
+{
+	if(pid<0) return -1;
+	pid = pid ? pid : myproc()->pid;
+ 	
+	struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->pid == pid){
+      int nice=p->nice;
+			nice+=inc;
+			if(nice<-20 || nice>19){
+      	release(&p->lock);
+				return -1;
+			}
+			p->nice = nice;
+      release(&p->lock);
+      return 0;
+    }
+    release(&p->lock);
+  }
+  return -1;
+}
+
+int
 getticks(int pid)
 {
   struct proc *p;
