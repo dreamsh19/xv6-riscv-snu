@@ -217,7 +217,9 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
-
+#ifdef SNU
+  p->nice = 0;
+#endif
   release(&p->lock);
 }
 
@@ -282,6 +284,9 @@ fork(void)
   pid = np->pid;
 
   np->state = RUNNABLE;
+#ifdef SNU
+  np->nice = p->nice;
+#endif
 
   release(&np->lock);
 
