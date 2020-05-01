@@ -120,6 +120,10 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+#ifdef SNU
+  p->ticks = 0;
+#endif
+
   return p;
 }
 
