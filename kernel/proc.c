@@ -223,6 +223,7 @@ userinit(void)
   p->state = RUNNABLE;
 #ifdef SNU
   p->nice = 0;
+  p->counter = 6;
 #endif
   release(&p->lock);
 }
@@ -290,10 +291,13 @@ fork(void)
   np->state = RUNNABLE;
 #ifdef SNU
   np->nice = p->nice;
+  np->counter = (p->counter +1) >> 1;
+  p->counter >>= 1;
 #endif
 
   release(&np->lock);
 
+  // printf("===FORK===\n");procdump();
   return pid;
 }
 
@@ -450,33 +454,112 @@ wait(uint64 addr)
 //  - swtch to start running that process.
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
+
+struct proc *selectNext()
+{
+  int maxGood = 0;
+  struct proc *p;
+  struct proc *next = 0;
+  for (p = proc; p < &proc[NPROC]; p++)
+  {
+    acquire(&p->lock);
+
+    if (p->state == RUNNABLE)
+    {
+      int good = p->counter ? (p->counter + (20 - p->nice)) : 0;
+      if (good > maxGood)
+      {
+        maxGood = good;
+        next = p;
+      }
+    }
+    release(&p->lock);
+  }
+  // printf("NEXT[%p]\n",p);
+  // procdump();
+  // printf("MAXGOOD[%d]\n",maxGood);
+  return next;
+}
+
+int findRunnable()
+{
+  struct proc *p;
+  for (p = proc; p < &proc[NPROC]; p++)
+  {
+    acquire(&p->lock);
+    if (p->state == RUNNABLE && p->counter>0)
+    {
+      release(&p->lock);
+      return 1;
+    }
+    release(&p->lock);
+  }
+  return 0;
+}
+
+void distributeCounter()
+{ 
+  struct proc *p;
+  for (p = proc; p < &proc[NPROC]; p++)
+  {
+    acquire(&p->lock);
+
+    if (p->state == RUNNABLE)
+    {
+      p->counter = ((20 - (p->nice)) >> 2) + 1;
+    }
+    else
+    {
+      p->counter = p->counter ? (p->counter >> 1) + ((20 - (p->nice)) >> 2) + 1 : 0;
+    }
+    release(&p->lock);
+  }
+}
+
+int busywait()
+{
+  struct proc *p;
+  for (p = proc; p < &proc[NPROC]; p++)
+  {
+    acquire(&p->lock);
+    if (p->state == RUNNABLE)
+    {
+      release(&p->lock);
+      return 0;
+    }
+    release(&p->lock);
+  }
+  return 1;
+}
+
 void
 scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-  
   c->proc = 0;
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
+    
+    // printf("\n<<<NEW EPOCH>>>\n");
+    // procdump();
+    while(findRunnable()){
+      p=selectNext();
+      while(p && p->state == RUNNABLE && (p->counter>0)){
+        acquire(&p->lock);
         p->state = RUNNING;
         c->proc = p;
         swtch(&c->scheduler, &p->context);
-
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
+        c->proc = 0 ; 
+        release(&p->lock);
       }
-      release(&p->lock);
     }
+    
+    while(busywait()){
+    }
+    distributeCounter();    
+
   }
 }
 
@@ -516,6 +599,7 @@ yield(void)
   p->state = RUNNABLE;
 #ifdef SNU
   p->ticks++;
+  p->counter--;
 #endif
   sched();
   release(&p->lock);
@@ -682,7 +766,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    printf("%d %s %s", p->pid, state, p->name);
+    printf("%d %s %s nice[%d] counter[%d] ticks[%d]", p->pid, state, p->name, p->nice, p->counter, p->ticks);
     printf("\n");
   }
 }
