@@ -223,7 +223,6 @@ userinit(void)
   p->state = RUNNABLE;
 #ifdef SNU
   p->nice = 0;
-  p->counter = 6;
 #endif
   release(&p->lock);
 }
@@ -297,7 +296,6 @@ fork(void)
 
   release(&np->lock);
 
-  // printf("===FORK===\n");procdump();
   return pid;
 }
 
@@ -466,7 +464,7 @@ struct proc *selectNext()
 
     if (p->state == RUNNABLE)
     {
-      int good = p->counter ? (p->counter + (20 - p->nice)) : 0;
+      int good = p->counter>0 ? (p->counter + (20 - p->nice)) : 0;
       if (good > maxGood)
       {
         maxGood = good;
@@ -475,27 +473,10 @@ struct proc *selectNext()
     }
     release(&p->lock);
   }
-  // printf("NEXT[%p]\n",p);
-  // procdump();
-  // printf("MAXGOOD[%d]\n",maxGood);
+  
   return next;
 }
 
-int findRunnable()
-{
-  struct proc *p;
-  for (p = proc; p < &proc[NPROC]; p++)
-  {
-    acquire(&p->lock);
-    if (p->state == RUNNABLE && p->counter>0)
-    {
-      release(&p->lock);
-      return 1;
-    }
-    release(&p->lock);
-  }
-  return 0;
-}
 
 void distributeCounter()
 { 
@@ -541,12 +522,18 @@ scheduler(void)
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-    
-    // printf("\n<<<NEW EPOCH>>>\n");
-    // procdump();
-    while(findRunnable()){
-      p=selectNext();
-      while(p && p->state == RUNNABLE && (p->counter>0)){
+    while(busywait()){
+    }
+    for (p = proc; p < &proc[NPROC]; p++){
+      if(p->state == RUNNABLE && p->counter>0){
+        goto no_distribute;
+      }
+    }
+    distributeCounter();
+
+no_distribute:
+    while((p=selectNext())!=0){
+      while(p->state == RUNNABLE && (p->counter>0)){
         acquire(&p->lock);
         p->state = RUNNING;
         c->proc = p;
@@ -555,10 +542,6 @@ scheduler(void)
         release(&p->lock);
       }
     }
-    
-    while(busywait()){
-    }
-    distributeCounter();    
 
   }
 }

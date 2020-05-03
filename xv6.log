@@ -1,9 +1,0 @@
-
-xv6 kernel is booting
-
-init: starting sh
-$ sc  
-1 sleep  init nice[0] counter[11] ticks[1]
-2 sleep  sh nice[0] counter[6] ticks[0]
-QEMU: Terminated
-
