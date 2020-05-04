@@ -514,9 +514,14 @@ int busywait()
 int needUpdate(){
   struct proc *p;
   for (p = proc; p < &proc[NPROC]; p++){
+      acquire(&p->lock);
+
       if(p->state == RUNNABLE && p->counter>0){
+        release(&p->lock);
         return 0;
       }
+      release(&p->lock);
+
   }
   return 1;
 }
@@ -546,7 +551,6 @@ scheduler(void)
         release(&p->lock);
       }
     }
-
   }
 }
 
