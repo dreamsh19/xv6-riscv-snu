@@ -530,6 +530,10 @@ scheduler(void)
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
+    
+    while(busywait()){
+    }
+
     if(needUpdate()) updateCounter();
 
     while((p=nextProc())!=0){
@@ -541,8 +545,6 @@ scheduler(void)
         c->proc = 0 ; 
         release(&p->lock);
       }
-    }
-    while(busywait()){
     }
 
   }
