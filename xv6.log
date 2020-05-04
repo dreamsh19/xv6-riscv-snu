@@ -1,0 +1,12 @@
+
+xv6 kernel is booting
+
+init: starting sh
+$ 
+1 sleep  init nice[0] counter[3] ticks[0]
+2 sleep  sh nice[0] counter[2] ticks[1]
+
+1 sleep  init nice[0] counter[3] ticks[0]
+2 sleep  sh nice[0] counter[2] ticks[1]
+QEMU: Terminated
+

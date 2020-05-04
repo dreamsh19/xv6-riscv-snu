@@ -453,7 +453,7 @@ wait(uint64 addr)
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
 
-struct proc *selectNext()
+struct proc *nextProc()
 {
   int maxGood = 0;
   struct proc *p;
@@ -478,20 +478,18 @@ struct proc *selectNext()
 }
 
 
-void distributeCounter()
+void updateCounter()
 { 
   struct proc *p;
   for (p = proc; p < &proc[NPROC]; p++)
   {
     acquire(&p->lock);
 
-    if (p->state == RUNNABLE)
-    {
+    if (p->state == RUNNABLE){
       p->counter = ((20 - (p->nice)) >> 2) + 1;
     }
-    else
-    {
-      p->counter = p->counter ? (p->counter >> 1) + ((20 - (p->nice)) >> 2) + 1 : 0;
+    else{
+      p->counter = p->counter>0 ? (p->counter >> 1) + ((20 - (p->nice)) >> 2) + 1 : 0;
     }
     release(&p->lock);
   }
@@ -513,6 +511,16 @@ int busywait()
   return 1;
 }
 
+int needUpdate(){
+  struct proc *p;
+  for (p = proc; p < &proc[NPROC]; p++){
+      if(p->state == RUNNABLE && p->counter>0){
+        return 0;
+      }
+  }
+  return 1;
+}
+
 void
 scheduler(void)
 {
@@ -522,17 +530,9 @@ scheduler(void)
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-    while(busywait()){
-    }
-    for (p = proc; p < &proc[NPROC]; p++){
-      if(p->state == RUNNABLE && p->counter>0){
-        goto no_distribute;
-      }
-    }
-    distributeCounter();
+    if(needUpdate()) updateCounter();
 
-no_distribute:
-    while((p=selectNext())!=0){
+    while((p=nextProc())!=0){
       while(p->state == RUNNABLE && (p->counter>0)){
         acquire(&p->lock);
         p->state = RUNNING;
@@ -541,6 +541,8 @@ no_distribute:
         c->proc = 0 ; 
         release(&p->lock);
       }
+    }
+    while(busywait()){
     }
 
   }
