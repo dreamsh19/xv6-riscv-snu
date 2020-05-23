@@ -13,6 +13,10 @@
 uint64 freemem = 0;
 #endif
 
+#define MAXPAGES (1L << 15)
+
+uint64 refcnt[MAXPAGES];
+
 void freerange(void *pa_start, void *pa_end);
 
 extern char end[]; // first address after kernel.
@@ -55,17 +59,19 @@ kfree(void *pa)
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
+  if(refcnt[PA2PX(pa)] > 0)
+    return;
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
   r = (struct run*)pa;
-
   acquire(&kmem.lock);
   r->next = kmem.freelist;
   kmem.freelist = r;
 #ifdef SNU
   freemem++;
 #endif
+  refcnt[PA2PX(r)]=0;
   release(&kmem.lock);
 }
 

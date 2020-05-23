@@ -11,6 +11,8 @@ uint ticks;
 
 extern char trampoline[], uservec[], userret[];
 
+extern uint64 refcnt[];
+
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
 
@@ -27,6 +29,42 @@ void
 trapinithart(void)
 {
   w_stvec((uint64)kernelvec);
+}
+
+int
+page_fault_handler()
+{
+  // printf("===============PAGE FAULT HANDLER===============\n");
+  uint64 va = r_stval();
+  uint64 pa;
+  uint flags = PTE_U | PTE_R | PTE_W | PTE_X;
+  struct proc *p = myproc();
+  pagetable_t pagetable = p->pagetable;
+  pte_t *pte = walk(pagetable,va,0);
+  char *mem;
+  if ((pa = walkaddr(pagetable, va)) == 0){
+    exit(-1);
+  }
+  // if((*pte & PTE_X) !=0 ){
+  //   exit(-1);
+  // }
+  // printf("PA[%p]REFCNT[%d]\n",pa,refcnt[PA2PX(pa)]);
+  if(refcnt[PA2PX(pa)]==1)
+  {
+      *pte |= PTE_W;
+      return 0;
+  }
+  // printf("NEW ALLOCATION\n");
+  if ((mem = kalloc()) == 0)
+    return -1;
+  memmove(mem, (char*)pa, PGSIZE);
+  // printf("VA[%p]\nPA[%p]\nMEM[%p]\n",va,pa,mem);
+  uvmunmap(pagetable, PGROUNDDOWN(va), PGSIZE, 0);
+  if(mappages(pagetable, PGROUNDDOWN(va), PGSIZE, (uint64)mem, flags) != 0){
+    kfree(mem);
+    return -1;
+  }
+  return 0;
 }
 
 //
@@ -65,7 +103,12 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  }else if(r_scause() == 12 || r_scause() == 14 || r_scause() == 15){
+    // printf("PAGE FAULT[%d]\n", r_scause());
+    if(r_scause() != 15)
+      panic("usertrap: NOT STORE PAGE FAULT");
+    page_fault_handler();
+  }else if((which_dev = devintr()) != 0){
     // ok
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
@@ -126,6 +169,7 @@ usertrapret(void)
   uint64 fn = TRAMPOLINE + (userret - trampoline);
   ((void (*)(uint64,uint64))fn)(TRAPFRAME, satp);
 }
+
 
 // interrupts and exceptions from kernel code go here via kernelvec,
 // on whatever the current kernel stack is.

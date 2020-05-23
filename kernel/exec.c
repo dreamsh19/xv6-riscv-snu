@@ -43,6 +43,7 @@ exec(char *path, char **argv)
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, 0, (uint64)&ph, off, sizeof(ph)) != sizeof(ph))
       goto bad;
+    // printf("ph%d: LOADED?%d, start at: 0x%x, size: 0x%x\n",i, ph.type == ELF_PROG_LOAD, ph.vaddr, ph.memsz);
     if(ph.type != ELF_PROG_LOAD)
       continue;
     if(ph.memsz < ph.filesz)
@@ -55,6 +56,18 @@ exec(char *path, char **argv)
     if(ph.vaddr % PGSIZE != 0)
       goto bad;
 #endif
+    // if ((pa = walkaddr(pagetable, ph.vaddr)) == 0)
+    //   goto bad;
+    // if ((ph.flags & ELF_PROG_FLAG_WRITE) == 0){
+    //   // printf("CODE SEGMENT\n");
+    //   uvmunmap(pagetable,ph.vaddr,ph.memsz,0);
+    //   mappages(pagetable,ph.vaddr,ph.memsz,pa,PTE_U | PTE_R | PTE_X);
+    // }else{
+    //   // printf("DATA SEGMENT\n");
+    //   uvmunmap(pagetable, ph.vaddr, ph.memsz, 0);
+    //   mappages(pagetable,ph.vaddr,ph.memsz,pa,PTE_U | PTE_R | PTE_W);
+    // }
+    
     if(loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
   }

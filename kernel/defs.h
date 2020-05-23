@@ -174,6 +174,7 @@ int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 #ifdef SNU
 void            freewalk(pagetable_t);
+pte_t*          walk(pagetable_t, uint64,int);
 uint64          v2p(pagetable_t, uint64);
 #endif
 

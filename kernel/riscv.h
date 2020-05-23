@@ -335,6 +335,7 @@ sfence_vma()
 
 // shift a physical address to the right place for a PTE.
 #define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)
+#define PA2PX(pa) ((((uint64)pa) >> 12) & 0x7FFF)
 
 #define PTE2PA(pte) (((pte) >> 10) << 12)
 
