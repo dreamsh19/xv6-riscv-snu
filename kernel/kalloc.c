@@ -58,9 +58,12 @@ kfree(void *pa)
 
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
+  // if ((uint64)pa > 0x87f00000)
+  //   printf("KFREE[%p]REFCNT[%d]\n", pa, refcnt[PA2PX(pa)]);
 
   if(refcnt[PA2PX(pa)] > 0)
     return;
+  
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
@@ -71,6 +74,7 @@ kfree(void *pa)
 #ifdef SNU
   freemem++;
 #endif
+
   refcnt[PA2PX(r)]=0;
   release(&kmem.lock);
 }
@@ -98,5 +102,6 @@ kalloc(void)
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
+  // printf("KALLOC[%p]\n",r);
   return (void*)r;
 }

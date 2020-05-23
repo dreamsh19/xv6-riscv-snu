@@ -110,7 +110,7 @@ found:
     release(&p->lock);
     return 0;
   }
-
+  // printf("TF[%p]\n", p->tf);
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
 
@@ -175,7 +175,7 @@ void
 proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
   uvmunmap(pagetable, TRAMPOLINE, PGSIZE, 0);
-  uvmunmap(pagetable, TRAPFRAME, PGSIZE, 0);
+  uvmunmap(pagetable, TRAPFRAME, PGSIZE, 1);
   if(sz > 0)
     uvmfree(pagetable, sz);
 #ifdef SNU
