@@ -37,17 +37,20 @@ page_fault_handler()
   // printf("===============PAGE FAULT HANDLER===============\n");
   uint64 va = r_stval();
   uint64 pa;
-  uint flags = PTE_U | PTE_R | PTE_W | PTE_X;
+  uint flags = PTE_U | PTE_W | PTE_R;
   struct proc *p = myproc();
   pagetable_t pagetable = p->pagetable;
   pte_t *pte = walk(pagetable,va,0);
   char *mem;
-  if ((pa = walkaddr(pagetable, va)) == 0){
+  if ((pa = walkaddr(pagetable, va)) == 0)
+    exit(-1);
+  // printf("PID[%d]VA[%p]\nPA[%p]\n",p->pid,va,pa);
+  // printf("PTE_FLAGS[%x]\n", PTE_FLAGS(*pte));
+  
+  if ((*pte & PTE_X) != 0){
     exit(-1);
   }
-  // if((*pte & PTE_X) !=0 ){
-  //   exit(-1);
-  // }
+
   // printf("PA[%p]REFCNT[%d]\n",pa,refcnt[PA2PX(pa)]);
   if(refcnt[PA2PX(pa)]==1)
   {
@@ -103,7 +106,7 @@ usertrap(void)
     intr_on();
 
     syscall();
-  }else if(r_scause() == 12 || r_scause() == 14 || r_scause() == 15){
+  }else if(r_scause() == 12 || r_scause() == 13 || r_scause() == 15){
     // printf("PAGE FAULT[%d]\n", r_scause());
     if(r_scause() != 15)
       panic("usertrap: NOT STORE PAGE FAULT");

@@ -13,7 +13,7 @@ int
 exec(char *path, char **argv)
 {
   char *s, *last;
-  int i, off;
+  int i, off, flags;
   uint64 argc, sz, sp, ustack[MAXARG+1], stackbase;
   struct elfhdr elf;
   struct inode *ip;
@@ -50,7 +50,12 @@ exec(char *path, char **argv)
       goto bad;
     if(ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
-    if((sz = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz)) == 0)
+    if ((ph.flags & ELF_PROG_FLAG_WRITE) == 0){
+      flags=PTE_U | PTE_R | PTE_X;
+    }else{
+      flags=PTE_U | PTE_R | PTE_W;
+    }
+    if((sz = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz,flags)) == 0)
       goto bad;
 #ifndef SNU
     if(ph.vaddr % PGSIZE != 0)
@@ -59,11 +64,11 @@ exec(char *path, char **argv)
     // if ((pa = walkaddr(pagetable, ph.vaddr)) == 0)
     //   goto bad;
     // if ((ph.flags & ELF_PROG_FLAG_WRITE) == 0){
-    //   // printf("CODE SEGMENT\n");
+    //   printf("CODE SEGMENT\n");
     //   uvmunmap(pagetable,ph.vaddr,ph.memsz,0);
     //   mappages(pagetable,ph.vaddr,ph.memsz,pa,PTE_U | PTE_R | PTE_X);
     // }else{
-    //   // printf("DATA SEGMENT\n");
+    //   printf("DATA SEGMENT\n");
     //   uvmunmap(pagetable, ph.vaddr, ph.memsz, 0);
     //   mappages(pagetable,ph.vaddr,ph.memsz,pa,PTE_U | PTE_R | PTE_W);
     // }
@@ -81,12 +86,18 @@ exec(char *path, char **argv)
   // Allocate two pages at the next page boundary.
   // Use the second as the user stack.
   sz = PGROUNDUP(sz);
-  if((sz = uvmalloc(pagetable, sz, sz + 2*PGSIZE)) == 0)
+  if((sz = uvmalloc(pagetable, sz, sz + 2*PGSIZE, PTE_U | PTE_R | PTE_W)) == 0)
     goto bad;
   uvmclear(pagetable, sz-2*PGSIZE);
   sp = sz;
   stackbase = sp - PGSIZE;
-
+  // uvmunmap(pagetable,stackbase,PGSIZE,0);
+  // pa = walkaddr(pagetable,stackbase);
+  // mappages(pagetable,stackbase,PGSIZE,pa,PTE_U | PTE_R | PTE_W);
+  // uvmunmap(pagetable,sp,PGSIZE,0);
+  // pa = walkaddr(pagetable,sp);
+  // mappages(pagetable,sp,PGSIZE,pa,PTE_U | PTE_R | PTE_W);
+  
   // Push argument strings, prepare rest of stack in ustack.
   for(argc = 0; argv[argc]; argc++) {
     if(argc >= MAXARG)

@@ -233,7 +233,7 @@ growproc(int n)
 
   sz = p->sz;
   if(n > 0){
-    if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
+    if((sz = uvmalloc(p->pagetable, sz, sz + n,PTE_U | PTE_R | PTE_W)) == 0) {
       return -1;
     }
   } else if(n < 0){
@@ -265,7 +265,6 @@ fork(void)
     release(&np->lock);
     return -1;
   }
-
   np->sz = p->sz;
 
   np->parent = p;
@@ -289,7 +288,7 @@ fork(void)
   np->state = RUNNABLE;
 
   release(&np->lock);
-
+  // printf("PID[%d] FORK END\n",pid);
   return pid;
 }
 
