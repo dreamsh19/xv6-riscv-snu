@@ -106,7 +106,8 @@ usertrap(void)
     intr_on();
 
     syscall();
-  }else if(r_scause() == 12 || r_scause() == 13 || r_scause() == 15){
+  }else if(r_scause() == 15){
+  // }else if(r_scause() == 12 || r_scause() == 13 || r_scause() == 15){
     // printf("PAGE FAULT[%d]\n", r_scause());
     if(r_scause() != 15)
       panic("usertrap: NOT STORE PAGE FAULT");

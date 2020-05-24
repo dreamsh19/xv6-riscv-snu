@@ -56,11 +56,9 @@ kfree(void *pa)
 {
   struct run *r;
 
-  if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
+  if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP){
     panic("kfree");
-  // if ((uint64)pa > 0x87f00000)
-  //   printf("KFREE[%p]REFCNT[%d]\n", pa, refcnt[PA2PX(pa)]);
-
+  }
   if(refcnt[PA2PX(pa)] > 0)
     return;
   
@@ -75,7 +73,7 @@ kfree(void *pa)
   freemem++;
 #endif
 
-  refcnt[PA2PX(r)]=0;
+  refcnt[PA2PX(pa)]=0;
   release(&kmem.lock);
 }
 

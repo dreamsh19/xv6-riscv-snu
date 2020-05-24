@@ -110,7 +110,6 @@ found:
     release(&p->lock);
     return 0;
   }
-  // printf("TF[%p]\n", p->tf);
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
 
@@ -165,7 +164,6 @@ proc_pagetable(struct proc *p)
   // map the trapframe just below TRAMPOLINE, for trampoline.S.
   mappages(pagetable, TRAPFRAME, PGSIZE,
            (uint64)(p->tf), PTE_R | PTE_W);
-
   return pagetable;
 }
 
@@ -175,7 +173,7 @@ void
 proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
   uvmunmap(pagetable, TRAMPOLINE, PGSIZE, 0);
-  uvmunmap(pagetable, TRAPFRAME, PGSIZE, 1);
+  uvmunmap(pagetable, TRAPFRAME, PGSIZE, 0);
   if(sz > 0)
     uvmfree(pagetable, sz);
 #ifdef SNU
@@ -259,7 +257,6 @@ fork(void)
 
   // Copy user memory from parent to child.
   
-  // printf("PID[%d] FORK\n", p->pid);
   if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
     freeproc(np);
     release(&np->lock);
@@ -377,7 +374,6 @@ exit(int status)
   p->state = ZOMBIE;
 
   release(&original_parent->lock);
-
   // Jump into the scheduler, never to return.
   sched();
   panic("zombie exit");
@@ -673,6 +669,7 @@ procdump(void)
     else
       state = "???";
     printf("%d %s %s", p->pid, state, p->name);
+    // print_pagemap(p);
     printf("\n");
   }
 #ifdef SNU
@@ -680,3 +677,33 @@ procdump(void)
 #endif
 }
 
+extern uint64 refcnt[];
+
+void print_pagemap(struct proc *p){
+  if(p->pid>0){
+    uint64 va=0, pa;
+    pagetable_t pagetable=p->pagetable;
+    pte_t *pte;
+    printf("\nPID[%d]\n",p->pid);
+    char flag[6];
+    for (; va < MAXVA; va += PGSIZE)
+    {
+      if((pte=walk(pagetable,va,0))==0)
+        continue;
+      if((*pte & PTE_V)==0)
+        continue;
+
+      pa=v2p(pagetable,va);
+      
+      flag[0]=(*pte & PTE_U) ? 'U' : ' ';
+      flag[1]=(*pte & PTE_X) ? 'X' : ' ';
+      flag[2]=(*pte & PTE_W) ? 'W' : ' ';
+      flag[3]=(*pte & PTE_R) ? 'R' : ' ';
+      flag[4]=(*pte & PTE_V) ? 'V' : ' ';
+      flag[5]='\0';
+
+      printf("VA[%p]PA[%p]PERM[%s]refcnt[%d]\n",va,pa,flag,refcnt[PA2PX(pa)]);
+      
+    }
+  }
+}

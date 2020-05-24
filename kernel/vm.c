@@ -166,13 +166,23 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
     if(*pte & PTE_V)
       panic("remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
-    if(pagetable!=kernel_pagetable)
+    // if((*pte & PTE_W) && refcnt[PA2PX(pa)]!=0){
+    //   // if(pagetable==kernel_pagetable){
+    //   //   printf("KERNEL PAGE\n");        
+    //   // }else{
+    //   //   printf("USER PAGE\n");
+    //   // }
+    //   // // procdump();
+    //   // printf("VA[%p]PA[%p]REFCNT[%d]\n",a,pa,refcnt[PA2PX(pa)]);
+    //   panic("double map");
+    // }
+    if(*pte & PTE_U)
       refcnt[PA2PX(pa)]++;
     if(a == last)
       break;
     a += PGSIZE;
     pa += PGSIZE;
-  }
+  } 
   return 0;
 }
 
@@ -198,7 +208,8 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 size, int do_free)
       panic("uvmunmap: not a leaf");
     
     pa = PTE2PA(*pte);
-    refcnt[PA2PX(pa)]--;
+    if(*pte & PTE_U)
+      refcnt[PA2PX(pa)]--;
     if(do_free){
       kfree((void*)pa);
     }
@@ -338,7 +349,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
     *pte &= ~PTE_W;
-    flags = PTE_FLAGS(*pte);
+    flags = PTE_FLAGS(*pte) & 0x1E;
     if(mappages(new, i, PGSIZE, (uint64)pa, flags) != 0){
       goto err;
     }
@@ -364,6 +375,7 @@ uvmclear(pagetable_t pagetable, uint64 va)
   if(pte == 0)
     panic("uvmclear");
   *pte &= ~PTE_U;
+  
 }
 
 // Copy from kernel to user.

@@ -44,6 +44,6 @@ main(int argc, char **argv)
   PRINT_ADDR(&g);
   PRINT_ADDR(&s);
   PRINT_ADDR(hp);
-
+  
   exit(0);
 }

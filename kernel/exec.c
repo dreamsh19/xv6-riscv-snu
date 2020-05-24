@@ -51,28 +51,27 @@ exec(char *path, char **argv)
     if(ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
     if ((ph.flags & ELF_PROG_FLAG_WRITE) == 0){
-      flags=PTE_U | PTE_R | PTE_X;
+      //code
+      if(ph.flags & ELF_PROG_FLAG_EXEC){ 
+        flags=PTE_U | PTE_R | PTE_X;
+      }else{
+        panic("R");
+      }
     }else{
-      flags=PTE_U | PTE_R | PTE_W;
+      //data
+      if (ph.flags & ELF_PROG_FLAG_EXEC){
+        panic("RWE");
+      }else{
+        flags = PTE_U | PTE_R | PTE_W;
+      }
     }
     if((sz = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz,flags)) == 0)
       goto bad;
 #ifndef SNU
+
     if(ph.vaddr % PGSIZE != 0)
       goto bad;
-#endif
-    // if ((pa = walkaddr(pagetable, ph.vaddr)) == 0)
-    //   goto bad;
-    // if ((ph.flags & ELF_PROG_FLAG_WRITE) == 0){
-    //   printf("CODE SEGMENT\n");
-    //   uvmunmap(pagetable,ph.vaddr,ph.memsz,0);
-    //   mappages(pagetable,ph.vaddr,ph.memsz,pa,PTE_U | PTE_R | PTE_X);
-    // }else{
-    //   printf("DATA SEGMENT\n");
-    //   uvmunmap(pagetable, ph.vaddr, ph.memsz, 0);
-    //   mappages(pagetable,ph.vaddr,ph.memsz,pa,PTE_U | PTE_R | PTE_W);
-    // }
-    
+#endif    
     if(loadseg(pagetable, ph.vaddr, ip, ph.off, ph.filesz) < 0)
       goto bad;
   }
@@ -88,15 +87,9 @@ exec(char *path, char **argv)
   sz = PGROUNDUP(sz);
   if((sz = uvmalloc(pagetable, sz, sz + 2*PGSIZE, PTE_U | PTE_R | PTE_W)) == 0)
     goto bad;
-  uvmclear(pagetable, sz-2*PGSIZE);
+  // uvmclear(pagetable, sz-2*PGSIZE);
   sp = sz;
   stackbase = sp - PGSIZE;
-  // uvmunmap(pagetable,stackbase,PGSIZE,0);
-  // pa = walkaddr(pagetable,stackbase);
-  // mappages(pagetable,stackbase,PGSIZE,pa,PTE_U | PTE_R | PTE_W);
-  // uvmunmap(pagetable,sp,PGSIZE,0);
-  // pa = walkaddr(pagetable,sp);
-  // mappages(pagetable,sp,PGSIZE,pa,PTE_U | PTE_R | PTE_W);
   
   // Push argument strings, prepare rest of stack in ustack.
   for(argc = 0; argv[argc]; argc++) {
@@ -134,6 +127,8 @@ exec(char *path, char **argv)
   // Commit to the user image.
   oldpagetable = p->pagetable;
   p->pagetable = pagetable;
+
+
   p->sz = sz;
   p->tf->epc = elf.entry;  // initial program counter = main
   p->tf->sp = sp; // initial stack pointer
