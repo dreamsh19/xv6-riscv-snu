@@ -95,7 +95,7 @@ exec(char *path, char **argv)
   sz = PGROUNDUP(sz);
   if((sz = uvmalloc(pagetable, sz, sz + 2*PGSIZE, PTE_U | PTE_R | PTE_W)) == 0)
     goto bad;
-  uvmclear(pagetable, sz-2*PGSIZE);
+  // uvmclear(pagetable, sz-2*PGSIZE);
   sp = sz;
   stackbase = sp - PGSIZE;
   
