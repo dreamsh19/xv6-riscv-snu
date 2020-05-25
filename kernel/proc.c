@@ -372,7 +372,7 @@ exit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
-
+  
   release(&original_parent->lock);
   // Jump into the scheduler, never to return.
   sched();

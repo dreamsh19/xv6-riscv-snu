@@ -50,21 +50,29 @@ exec(char *path, char **argv)
       goto bad;
     if(ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
-    if ((ph.flags & ELF_PROG_FLAG_WRITE) == 0){
+
+    if ((ph.flags & ELF_PROG_FLAG_EXEC)){
       //code
-      if(ph.flags & ELF_PROG_FLAG_EXEC){ 
-        flags=PTE_U | PTE_R | PTE_X;
-      }else{
-        panic("R");
-      }
+      flags = PTE_U | PTE_R | PTE_X;
     }else{
       //data
-      if (ph.flags & ELF_PROG_FLAG_EXEC){
-        panic("RWE");
-      }else{
-        flags = PTE_U | PTE_R | PTE_W;
-      }
+      flags = PTE_U | PTE_R | PTE_W;
     }
+    // if ((ph.flags & ELF_PROG_FLAG_WRITE) == 0){
+    //   //code
+    //   if(ph.flags & ELF_PROG_FLAG_EXEC){ 
+    //     flags=PTE_U | PTE_R | PTE_X;
+    //   }else{
+    //     panic("R");
+    //   }
+    // }else{
+    //   //data
+    //   if (ph.flags & ELF_PROG_FLAG_EXEC){
+    //     panic("RWE");
+    //   }else{
+    //     flags = PTE_U | PTE_R | PTE_W;
+    //   }
+    // }
     if((sz = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz,flags)) == 0)
       goto bad;
 #ifndef SNU
@@ -87,7 +95,7 @@ exec(char *path, char **argv)
   sz = PGROUNDUP(sz);
   if((sz = uvmalloc(pagetable, sz, sz + 2*PGSIZE, PTE_U | PTE_R | PTE_W)) == 0)
     goto bad;
-  // uvmclear(pagetable, sz-2*PGSIZE);
+  uvmclear(pagetable, sz-2*PGSIZE);
   sp = sz;
   stackbase = sp - PGSIZE;
   

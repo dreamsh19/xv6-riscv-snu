@@ -21,6 +21,11 @@ main(int argc, char **argv)
 
   if (fork() == 0)
   {
+    if( fork() == 0 ){
+      printf("granchild : after fork()\n");
+      exit(0);
+    }
+    wait(0);
     printf("child: after fork()\n");
     PRINT_ADDR(&g);
     PRINT_ADDR(&s);
