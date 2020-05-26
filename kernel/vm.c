@@ -166,17 +166,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
     if(*pte & PTE_V)
       panic("remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
-    // if((*pte & PTE_W) && refcnt[PA2PX(pa)]!=0){
-    //   // if(pagetable==kernel_pagetable){
-    //   //   printf("KERNEL PAGE\n");        
-    //   // }else{
-    //   //   printf("USER PAGE\n");
-    //   // }
-    //   // // procdump();
-    //   // printf("VA[%p]PA[%p]REFCNT[%d]\n",a,pa,refcnt[PA2PX(pa)]);
-    //   panic("double map");
-    // }
-    if(*pte & PTE_U)
+    if ((*pte & PTE_U) || ((*pte & (PTE_R | PTE_W | PTE_X)) == PTE_X))
       refcnt[PA2PX(pa)]++;
     if(a == last)
       break;
@@ -186,7 +176,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   return 0;
 }
 
-// Remove mappings from a page ta ble. The mappings in
+// Remove mappings from a page table. The mappings in
 // the given range must exist. Optionally free the
 // physical memory.
 void
@@ -208,7 +198,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 size, int do_free)
       panic("uvmunmap: not a leaf");
     
     pa = PTE2PA(*pte);
-    if(*pte & PTE_U)
+    if ((*pte & PTE_U) || ((*pte & (PTE_R | PTE_W | PTE_X)) == PTE_X))
       refcnt[PA2PX(pa)]--;
     if(do_free){
       kfree((void*)pa);
@@ -245,7 +235,6 @@ uvminit(pagetable_t pagetable, uchar *src, uint sz)
     panic("inituvm: more than a page");
   mem = kalloc();
   memset(mem, 0, PGSIZE);
-  // mappages(pagetable, 0, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_X|PTE_U);
   mappages(pagetable, 0, PGSIZE, (uint64)mem, PTE_R|PTE_X|PTE_U);
   memmove(mem, src, sz);
 }
@@ -350,14 +339,9 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     pa = PTE2PA(*pte);
     *pte &= ~PTE_W;
     flags = PTE_FLAGS(*pte) & 0x1E;
-    // flags = PTE_FLAGS(*pte);
-    
     if(mappages(new, i, PGSIZE, (uint64)pa, flags) != 0){
       goto err;
     }
-    // printf("VA[%p]\nPA[%p]\n",i,pa);
-    // printf("MAPPAGE[%d] IN FORK DONE\n", i);
-
   }
   return 0;
 
@@ -376,7 +360,8 @@ uvmclear(pagetable_t pagetable, uint64 va)
   pte = walk(pagetable, va, 0);
   if(pte == 0)
     panic("uvmclear");
-  *pte &= ~PTE_U;
+  *pte &= ~(PTE_U | PTE_W | PTE_R);
+  *pte |= PTE_X;
   
 }
 

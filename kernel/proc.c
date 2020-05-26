@@ -285,7 +285,6 @@ fork(void)
   np->state = RUNNABLE;
 
   release(&np->lock);
-  // printf("PID[%d] FORK END\n",pid);
   return pid;
 }
 

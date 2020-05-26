@@ -100,6 +100,5 @@ kalloc(void)
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
-  // printf("KALLOC[%p]\n",r);
   return (void*)r;
 }
