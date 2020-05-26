@@ -44,24 +44,19 @@ page_fault_handler()
   char *mem;
   if ((pa = walkaddr(pagetable, va)) == 0)
     exit(-1);
-  // printf("PID[%d]VA[%p]\nPA[%p]\n",p->pid,va,pa);
-  // printf("PTE_FLAGS[%x]\n", PTE_FLAGS(*pte));
   
   if ((*pte & PTE_X) != 0){
     exit(-1);
   }
 
-  // printf("PA[%p]REFCNT[%d]\n",pa,refcnt[PA2PX(pa)]);
   if(refcnt[PA2PX(pa)]==1)
   {
       *pte |= PTE_W;
       return 0;
   }
-  // printf("NEW ALLOCATION\n");
   if ((mem = kalloc()) == 0)
     return -1;
   memmove(mem, (char*)pa, PGSIZE);
-  // printf("VA[%p]\nPA[%p]\nMEM[%p]\n",va,pa,mem);
   uvmunmap(pagetable, PGROUNDDOWN(va), PGSIZE, 0);
   if(mappages(pagetable, PGROUNDDOWN(va), PGSIZE, (uint64)mem, flags) != 0){
     kfree(mem);
