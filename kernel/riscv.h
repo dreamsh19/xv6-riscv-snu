@@ -320,6 +320,7 @@ sfence_vma()
   asm volatile("sfence.vma zero, zero");
 }
 
+#define MAXPAGES ((PHYSTOP - KERNBASE) >> PGSHIFT)
 
 #define PGSIZE 4096 // bytes per page
 #define PGSHIFT 12  // bits of offset within a page
@@ -335,7 +336,7 @@ sfence_vma()
 
 // shift a physical address to the right place for a PTE.
 #define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)
-#define PA2PX(pa) ((((uint64)pa) >> 12) & 0x7FFF)
+#define PA2PX(pa) ((((uint64)pa) >> 12) & (MAXPAGES-1))
 
 #define PTE2PA(pte) (((pte) >> 10) << 12)
 

@@ -13,8 +13,6 @@
 uint64 freemem = 0;
 #endif
 
-#define MAXPAGES (1L << 15)
-
 uint64 refcnt[MAXPAGES];
 
 void freerange(void *pa_start, void *pa_end);
