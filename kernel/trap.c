@@ -56,11 +56,9 @@ page_fault_handler()
   if ((mem = kalloc()) == 0)
     return -1;
   memmove(mem, (char*)pa, PGSIZE);
-  uvmunmap(pagetable, PGROUNDDOWN(va), PGSIZE, 0);
-  if(mappages(pagetable, PGROUNDDOWN(va), PGSIZE, (uint64)mem, flags) != 0){
-    kfree(mem);
+  if(uvmremap(pagetable, PGROUNDDOWN(va), PGSIZE,(uint64)mem, flags)!=0)
     return -1;
-  }
+  
   return 0;
 }
 

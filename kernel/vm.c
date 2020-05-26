@@ -211,6 +211,17 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 size, int do_free)
   }
 }
 
+int
+uvmremap(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
+{
+  uvmunmap(pagetable, va, size, 0);
+  if(mappages(pagetable, va, size, pa, perm) != 0){
+    kfree(pa);
+    return -1;
+  
+  return 0;
+}
+
 // create an empty user page table.
 pagetable_t
 uvmcreate()
@@ -390,11 +401,8 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
       if ((mem = kalloc()) == 0)
         return -1;
       memmove(mem, (char*)pa0, PGSIZE);
-      uvmunmap(pagetable, va0, n, 0);
-      if (mappages(pagetable, va0, n, (uint64)mem, PTE_U | PTE_W | PTE_R) != 0) {
-        kfree(mem);
+      if (uvmremap(pagetable, va0, n, (uint64)mem, PTE_U | PTE_W | PTE_R) != 0)
         return -1;
-      }
       pa0=(uint64)mem;
     }
     memmove((void *)(pa0 + (dstva - va0)), src, n);

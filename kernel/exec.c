@@ -43,21 +43,13 @@ exec(char *path, char **argv)
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, 0, (uint64)&ph, off, sizeof(ph)) != sizeof(ph))
       goto bad;
-    // printf("ph%d: LOADED?%d, start at: 0x%x, size: 0x%x\n",i, ph.type == ELF_PROG_LOAD, ph.vaddr, ph.memsz);
     if(ph.type != ELF_PROG_LOAD)
       continue;
     if(ph.memsz < ph.filesz)
       goto bad;
     if(ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
-
-    if ((ph.flags & ELF_PROG_FLAG_EXEC)){
-      //code
-      flags = PTE_U | PTE_R | PTE_X;
-    }else{
-      //data
-      flags = PTE_U | PTE_R | PTE_W;
-    }
+    flags = ph.flags & ELF_PROG_FLAG_EXEC ?  PTE_U | PTE_R | PTE_X : PTE_U | PTE_R | PTE_W;
     if((sz = uvmalloc(pagetable, sz, ph.vaddr + ph.memsz,flags)) == 0)
       goto bad;
 #ifndef SNU
