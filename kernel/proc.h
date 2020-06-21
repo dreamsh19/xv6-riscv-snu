@@ -93,7 +93,9 @@ struct proc {
   int killed;                  // If non-zero, have been killed
   int xstate;                  // Exit status to be returned to parent's wait
   int pid;                     // Process ID
-
+  int prio_base;
+  int prio_effective;
+  
   // these are private to the process, so p->lock need not be held.
   uint64 kstack;               // Bottom of kernel stack for this process
   uint64 sz;                   // Size of process memory (bytes)
