@@ -39,20 +39,20 @@ acquiresleep(struct sleeplock *lk)
 {
   acquire(&lk->lk);
   while (lk->locked) {
+    // struct proc *lock_holder=lk->holder;
+    struct sleeplock *lk_original=lk;
+    struct proc *lock_holder;
     
-    struct proc *lock_holder=lk->holder;
-    struct sleeplock *sl;
+    do{
+      lock_holder = lk->holder;
+      acquire(&lock_holder->lock);
+      if(lock_holder->prio_effective > myproc()->prio_effective){
+        lock_holder->prio_effective = myproc()->prio_effective;
+      }
+      release(&lock_holder->lock);
+    }while((lk=(struct sleeplock *) lock_holder->chan));
 
-level:
-    if(lock_holder->prio_effective > myproc()->prio_effective){
-      lock_holder->prio_effective = myproc()->prio_effective;
-    }
-
-    if(lock_holder->state == SLEEPING){
-      sl=(struct sleeplock *) lock_holder->chan;
-      lock_holder = sl->holder;
-      goto level;
-    }
+    lk=lk_original;
     sleep(lk, &lk->lk);
   }
   lk->locked = 1;
