@@ -123,7 +123,8 @@ found:
   p->prio_base = USER_DEF_PRIO;
   p->prio_effective = USER_DEF_PRIO;
   p->rr_scheduled = 0;
-
+  p->sleeplocks[0] = 0;
+  
   return p;
 }
 

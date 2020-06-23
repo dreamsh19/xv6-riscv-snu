@@ -65,6 +65,7 @@ found:
   t->context.ra = (uint64)ret;
   t->context.sp = t->kstack + PGSIZE;
   t->rr_scheduled = 0;
+  t->sleeplocks[0] = 0;
   
   return t;
 }
@@ -104,6 +105,7 @@ void freethread(struct proc *p)
   p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
+  p->sleeplock[0] = 0;
   p->state = UNUSED;
 }
 
