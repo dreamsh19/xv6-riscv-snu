@@ -105,7 +105,7 @@ void freethread(struct proc *p)
   p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
-  p->sleeplock[0] = 0;
+  p->sleeplocks[0] = 0;
   p->state = UNUSED;
 }
 
