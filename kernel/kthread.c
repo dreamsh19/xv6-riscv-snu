@@ -128,14 +128,30 @@ void kthread_set_prio(int newprio)
 {
   struct proc *t = myproc();
   acquire(&t->lock);
-  t->prio_base = newprio;
-  if (newprio > t->prio_effective){
-    t->prio_effective = newprio;
+  if (t->prio_base != t->prio_effective){
+    // donation
+    t->prio_base = newprio;
+    if(newprio < t->prio_effective){
+      t->prio_effective = newprio;
+    }
     release(&t->lock);
-    kthread_yield();
   }else{
-    release(&t->lock);
+    // no donation
+    t->prio_base = newprio;
+    t->prio_effective = newprio;
+    release(&t->lock);    
+    kthread_yield();
+
   }
+
+  // t->prio_base = newprio;
+  // if (newprio > t->prio_effective){
+  //   t->prio_effective = newprio;
+  //   release(&t->lock);
+  //   kthread_yield();
+  // }else{
+  //   release(&t->lock);
+  // }
 }
 
 int kthread_get_prio(void)
