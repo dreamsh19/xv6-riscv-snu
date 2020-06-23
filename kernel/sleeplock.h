@@ -5,6 +5,6 @@ struct sleeplock {
   
   // For debugging:
   char *name;        // Name of lock.
-  int pid;           // Process holding lock
+  struct proc *holder; // Process holding lock
 };
 
