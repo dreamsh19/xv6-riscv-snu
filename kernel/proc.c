@@ -431,6 +431,42 @@ wait(uint64 addr)
   }
 }
 
+
+struct proc *nextproc(){
+  struct proc *p, *next = 0;
+  int minPrio = USER_MAX_PRIO + 1;
+  
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if (p->state == RUNNABLE && p->prio_effective < minPrio){
+        minPrio = p->prio_effective;
+        next = p;
+      }
+      release(&p->lock);
+    }
+
+    if(!next) return 0;
+    // no runnable
+
+rr:
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if (p->state == RUNNABLE && p->prio_effective == minPrio && p->rr_scheduled == 0){
+        return p;
+      }
+      release(&p->lock);
+    }
+
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if (p->state == RUNNABLE && p->prio_effective == minPrio && p->rr_scheduled == 1)
+        p->rr_scheduled = 0;
+      release(&p->lock);
+    }
+    goto rr;
+}
+
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -445,27 +481,40 @@ scheduler(void)
   struct cpu *c = mycpu();
   
   c->proc = 0;
-  for(;;){
-    // Avoid deadlock by ensuring that devices can interrupt.
+  while(1){
     intr_on();
 
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->scheduler, &p->context);
-
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-      }
+    while((p=nextproc())){
+      p->state = RUNNING;
+      p->rr_scheduled = 1;
+      c->proc = p;
+      swtch(&c->scheduler, &p->context);
+      c->proc = 0;
       release(&p->lock);
     }
   }
+  
+  // for(;;){
+  //   // Avoid deadlock by ensuring that devices can interrupt.
+  //   intr_on();
+
+  //   for(p = proc; p < &proc[NPROC]; p++) {
+  //     acquire(&p->lock);
+  //     if(p->state == RUNNABLE) {
+  //       // Switch to chosen process.  It is the process's job
+  //       // to release its lock and then reacquire it
+  //       // before jumping back to us.
+  //       p->state = RUNNING;
+  //       c->proc = p;
+  //       swtch(&c->scheduler, &p->context);
+
+  //       // Process is done running for now.
+  //       // It should have changed its p->state before coming back.
+  //       c->proc = 0;
+  //     }
+  //     release(&p->lock);
+  //   }
+  // }
 }
 
 // Switch to scheduler.  Must hold only p->lock
