@@ -25,15 +25,12 @@
 #ifdef SNU
 
 extern pagetable_t kernel_pagetable;
-extern struct proc proc[];
-
-void (*FN)(void *);
-void *ARG;
 
 void ret()
 {
-  release(&myproc()->lock);
-  FN(ARG);
+  struct proc *p = myproc();
+  release(&p->lock);
+  p->fn(p->arg);
   kthread_exit();
 }
 
@@ -77,11 +74,9 @@ int kthread_create(const char *name, int prio, void (*fn)(void *), void *arg)
     return -1;
 
   safestrcpy(t->name, name, sizeof(name));
-  // t->context.s0 =(uint64)arg;
-  // t->context.ra =(uint64)fn;
 
-  FN = fn;
-  ARG = arg;
+  t->fn = fn;
+  t->arg = arg;
 
   t->prio_base = prio;
   t->prio_effective = prio;
@@ -106,6 +101,8 @@ void freethread(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->sleeplocks[0] = 0;
+  p->fn = 0;
+  p->arg = 0;
   p->state = UNUSED;
 }
 
@@ -145,15 +142,6 @@ void kthread_set_prio(int newprio)
     kthread_yield();
 
   }
-
-  // t->prio_base = newprio;
-  // if (newprio > t->prio_effective){
-  //   t->prio_effective = newprio;
-  //   release(&t->lock);
-  //   kthread_yield();
-  // }else{
-  //   release(&t->lock);
-  // }
 }
 
 int kthread_get_prio(void)

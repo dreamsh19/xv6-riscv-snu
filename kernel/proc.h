@@ -97,7 +97,9 @@ struct proc {
   int prio_effective;
   int rr_scheduled;
   struct sleeplock *sleeplocks[16];
-  
+  void (*fn)(void *);
+  void *arg;
+
   // these are private to the process, so p->lock need not be held.
   uint64 kstack;               // Bottom of kernel stack for this process
   uint64 sz;                   // Size of process memory (bytes)
