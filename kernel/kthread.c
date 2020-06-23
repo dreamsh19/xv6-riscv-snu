@@ -34,7 +34,7 @@ void ret()
 {
   release(&myproc()->lock);
   FN(ARG);
-  kthread_yield();
+  kthread_exit();
 }
 
 static struct proc *
@@ -129,9 +129,13 @@ void kthread_set_prio(int newprio)
   struct proc *t = myproc();
   acquire(&t->lock);
   t->prio_base = newprio;
-  if (newprio < t->prio_effective)
+  if (newprio > t->prio_effective){
     t->prio_effective = newprio;
-  release(&t->lock);
+    release(&t->lock);
+    kthread_yield();
+  }else{
+    release(&t->lock);
+  }
 }
 
 int kthread_get_prio(void)
