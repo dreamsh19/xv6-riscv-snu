@@ -23,6 +23,9 @@ acquiresleep(struct sleeplock *lk)
 {
   acquire(&lk->lk);
   while (lk->locked) {
+    if(lk->holder->prio_effective > myproc()->prio_effective){
+      lk->holder->prio_effective = myproc()->prio_effective;
+    }
     sleep(lk, &lk->lk);
   }
   lk->locked = 1;
@@ -34,10 +37,12 @@ void
 releasesleep(struct sleeplock *lk)
 {
   acquire(&lk->lk);
+  myproc()->prio_effective=myproc()->prio_base;
   lk->locked = 0;
   lk->holder = 0;
   wakeup(lk);
   release(&lk->lk);
+  yield();
 }
 
 int
