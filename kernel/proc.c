@@ -119,6 +119,10 @@ found:
   memset(&p->context, 0, sizeof p->context);
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
+  
+  p->prio_base = USER_DEF_PRIO;
+  p->prio_effective = USER_DEF_PRIO;
+  p->rr_scheduled = 0;
 
   return p;
 }

@@ -34,6 +34,7 @@ void ret()
 {
   release(&myproc()->lock);
   FN(ARG);
+  kthread_yield();
 }
 
 static struct proc *
@@ -63,6 +64,8 @@ found:
   memset(&t->context, 0, sizeof t->context);
   t->context.ra = (uint64)ret;
   t->context.sp = t->kstack + PGSIZE;
+  t->rr_scheduled = 0;
+  
   return t;
 }
 
