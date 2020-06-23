@@ -52,26 +52,47 @@ acquiresleep(struct sleeplock *lk)
 
 void removesleeplock(struct sleeplock *lk){
   struct proc *p = myproc();
-  acquire(&p->lock);
   int i;
   for (i = 0; i < NSLEEPLOCK; i++){
     if(p->sleeplocks[i]==lk){
       p->sleeplocks[i] = 0;
-      release(&p->lock);
       return;
     }
   }
-  release(&p->lock);
+}
+
+void
+set_prio_effective(){
+  struct proc *my = myproc();
+  struct proc *p;
+  struct sleeplock *lk;
+  int minPrio = my->prio_base;
+  for (int i = 0; i < NSLEEPLOCK; i++){
+    if((lk = my->sleeplocks[i])){
+      for (p = proc; p < &proc[NPROC]; p++){
+        if (p == myproc()) continue;
+        acquire(&p->lock);
+        if(p->chan == lk && p->state == SLEEPING && p->prio_effective < minPrio){
+          minPrio = p->prio_effective;
+        }
+        release(&p->lock);
+
+      }
+    }
+  }
+  my->prio_effective = minPrio;
 }
 
 void
 releasesleep(struct sleeplock *lk)
 {
   acquire(&lk->lk);
-  myproc()->prio_effective=myproc()->prio_base;
   lk->locked = 0;
   lk->holder = 0;
+  acquire(&myproc()->lock);
   removesleeplock(lk);
+  set_prio_effective();
+  release(&myproc()->lock);
   wakeup(lk);
   release(&lk->lk);
   yield();
