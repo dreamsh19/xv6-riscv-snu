@@ -110,7 +110,6 @@ found:
     release(&p->lock);
     return 0;
   }
-
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
 
@@ -123,7 +122,6 @@ found:
   p->prio_base = USER_DEF_PRIO;
   p->prio_effective = USER_DEF_PRIO;
   p->rr_scheduled = 0;
-  p->sleeplocks[0] = 0;
   
   return p;
 }
@@ -134,6 +132,7 @@ found:
 static void
 freeproc(struct proc *p)
 {
+  int i;
   if(p->tf)
     kfree((void*)p->tf);
   p->tf = 0;
@@ -147,6 +146,11 @@ freeproc(struct proc *p)
   p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
+  p->rr_scheduled = 0;
+  for (i = 0; i < NSLEEPLOCK; i++)
+    p->sleeplocks[i] = 0;
+  p->fn = 0;
+  p->arg = 0;
   p->state = UNUSED;
 }
 
@@ -454,7 +458,7 @@ struct proc *nextproc(){
     // no runnable
 
 rr:
-    for(p = proc; p < &proc[NPROC]; p++) {
+    for(p = next; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if (p->state == RUNNABLE && p->prio_effective == minPrio && p->rr_scheduled == 0){
         return p;
@@ -462,7 +466,7 @@ rr:
       release(&p->lock);
     }
 
-    for(p = proc; p < &proc[NPROC]; p++) {
+    for(p = next; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if (p->state == RUNNABLE && p->prio_effective == minPrio && p->rr_scheduled == 1)
         p->rr_scheduled = 0;
@@ -498,28 +502,6 @@ scheduler(void)
       release(&p->lock);
     }
   }
-  
-  // for(;;){
-  //   // Avoid deadlock by ensuring that devices can interrupt.
-  //   intr_on();
-
-  //   for(p = proc; p < &proc[NPROC]; p++) {
-  //     acquire(&p->lock);
-  //     if(p->state == RUNNABLE) {
-  //       // Switch to chosen process.  It is the process's job
-  //       // to release its lock and then reacquire it
-  //       // before jumping back to us.
-  //       p->state = RUNNING;
-  //       c->proc = p;
-  //       swtch(&c->scheduler, &p->context);
-
-  //       // Process is done running for now.
-  //       // It should have changed its p->state before coming back.
-  //       c->proc = 0;
-  //     }
-  //     release(&p->lock);
-  //   }
-  // }
 }
 
 // Switch to scheduler.  Must hold only p->lock

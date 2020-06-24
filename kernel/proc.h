@@ -96,7 +96,7 @@ struct proc {
   int prio_base;
   int prio_effective;
   int rr_scheduled;
-  struct sleeplock *sleeplocks[16];
+  struct sleeplock *sleeplocks[NSLEEPLOCK];
   void (*fn)(void *);
   void *arg;
 

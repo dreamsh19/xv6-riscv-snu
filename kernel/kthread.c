@@ -62,7 +62,6 @@ found:
   t->context.ra = (uint64)ret;
   t->context.sp = t->kstack + PGSIZE;
   t->rr_scheduled = 0;
-  t->sleeplocks[0] = 0;
   
   return t;
 }
@@ -82,16 +81,20 @@ int kthread_create(const char *name, int prio, void (*fn)(void *), void *arg)
   t->prio_effective = prio;
   t->state = RUNNABLE;
 
-  release(&t->lock);
 
-  if (prio < kthread_get_prio())
-    kthread_yield();
+  if (prio < kthread_get_prio()){
+      release(&t->lock);
+      kthread_yield();
+  }else{
+    release(&t->lock);
+  }
 
   return t->pid;
 }
 
 void freethread(struct proc *p)
 {
+  int i;
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -100,7 +103,9 @@ void freethread(struct proc *p)
   p->chan = 0;
   p->killed = 0;
   p->xstate = 0;
-  p->sleeplocks[0] = 0;
+  p->rr_scheduled = 0;
+  for (i = 0; i < NSLEEPLOCK; i++)
+    p->sleeplocks[i] = 0;
   p->fn = 0;
   p->arg = 0;
   p->state = UNUSED;
